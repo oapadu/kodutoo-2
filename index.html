@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="et">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.js"
+        integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
+        crossorigin="anonymous"></script>
     <script src="script.js" defer></script>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
@@ -11,22 +13,65 @@
 </head>
 <body>
     <div id="container">
-        <div id="wordDiv">Siia tuleb sõna</div>
-        <div id="score">Kuvame aega, mis kulus trükkimiseks</div>
+        <div id="wordDiv">Valmistume alustamiseks...</div>
+        <div id="score" style="display:none;">Aeg: 0.00s</div>
     </div>
 
     <div id="infoContainer">
-        <div id="info">Siia tuleb sõnade arv 1/5</div>
+        <div id="info">0/3</div>
     </div>
 
-    <div id="resultsModal" class="modal">
+    <img id="wpmImage" src="" alt="Speed Image" style="display:none;" />
+    <div id="chatMessage" style="display:none;"></div>
+
+    <button id="resultsBtn">Kuva tulemused</button>
+
+    <div id="resultsModal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2>Tulemused</h2>
             <div id="results"></div>
         </div>
     </div>
-    <button id="resultsBtn">Kuva tulemused</button>
 
+    <button id="settingsBtn">Seaded</button>
+
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+          <span class="close-settings">&times;</span>
+          <h3>Isikupärastamine</h3>
+      
+          <div class="setting-row">
+            <label for="textColor">Teksti värv:</label>
+            <select id="textColor">
+              <option value="white">Valge</option>
+              <option value="black">Must</option>
+              <option value="red">Punane</option>
+              <option value="gold">Kuldne</option>
+            </select>
+          </div>
+      
+          <div class="setting-row">
+            <label for="bgColor">Taustavärv:</label>
+            <select id="bgColor">
+              <option value=#1a1a1a>Tume</option>
+              <option value="white">Hele</option>
+              <option value="#004466">Sinine</option>
+              <option value="#003300">Roheline</option>
+            </select>
+          </div>
+      
+          <div class="setting-row">
+            <label for="textSize">Teksti suurus:</label>
+            <select id="textSize">
+              <option value="14px">Väike</option>
+              <option value="16px">Normaalne</option>
+              <option value="20px">Suur</option>
+            </select>
+          </div>
+      
+          <button id="applySettings">Rakenda</button>
+        </div>
+      </div>
 </body>
 </html>

@@ -1,5 +1,3 @@
-console.log("scripti fail õigesti ühendatud");
-
 let playerName = prompt("Palun sisesta oma nimi");
 
 const startSound = new Audio("sounds/wakeup.mp3");
@@ -19,10 +17,8 @@ class Typer {
         this.endTime = 0;
         this.typedCount = 0;
         this.allResults = JSON.parse(localStorage.getItem('typer')) || [];
-        this.score = 0;
-
+        this.wpm = 0;
         this.loadFromFile();
-        this.showAllResults();
     }
 
     loadFromFile() {
@@ -30,7 +26,7 @@ class Typer {
         $.get("database.txt", (data) => {
             let content = JSON.parse(data).content;
             this.allResults = content;
-            console.log(content);
+            this.showAllResults();
         });
     }
 
@@ -42,16 +38,11 @@ class Typer {
     separateWordsByLength(data) {
         for (let i = 0; i < data.length; i++) {
             const wordLength = data[i].length;
-
-            if (this.words[wordLength] === undefined) {
+            if (!this.words[wordLength]) {
                 this.words[wordLength] = [];
             }
-
             this.words[wordLength].push(data[i]);
         }
-
-        console.log(this.words);
-
         this.startTyper();
     }
 
@@ -59,14 +50,15 @@ class Typer {
         startSound.play();
         this.generateWords();
         this.startTime = performance.now();
-        $(document).keypress((event) => { this.shortenWords(event.key) });
     }
 
     generateWords() {
         for (let i = 0; i < this.wordsInGame; i++) {
             const wordLength = this.startingWordLength + i;
-            const randomWord = Math.round(Math.random() * this.words[wordLength].length);
-            this.typeWords[i] = this.words[wordLength][randomWord];
+            const wordList = this.words[wordLength];
+            if (!wordList) continue;
+            const randomIndex = Math.floor(Math.random() * wordList.length);
+            this.typeWords[i] = wordList[randomIndex];
         }
         this.selectWord();
     }
@@ -86,8 +78,8 @@ class Typer {
         $('#info').html(this.typedCount + "/" + this.wordsInGame);
     }
 
-    shortenWords(keyCode) {
-        if (keyCode != this.word.charAt(0)) {
+    shortenWords(key) {
+        if (key != this.word.charAt(0)) {
             errorSound.play();
             $('#container').css("background-color", "red");
             setTimeout(() => {
@@ -95,15 +87,14 @@ class Typer {
             }, 200);
         } else {
             typeSound.play();
-            if (this.word.length == 1 && keyCode == this.word.charAt(0) && this.typedCount == this.wordsInGame) {
+            if (this.word.length == 1 && this.typedCount == this.wordsInGame) {
                 this.endGame();
-            } else if (this.word.length == 1 && keyCode == this.word.charAt(0)) {
+            } else if (this.word.length == 1) {
                 this.selectWord();
-            } else if (this.word.length > 0 && keyCode == this.word.charAt(0)) {
+            } else {
                 this.word = this.word.slice(1);
             }
         }
-
         this.drawWord();
     }
 
@@ -115,40 +106,105 @@ class Typer {
     }
 
     calculateAndShowScore() {
-        this.score = ((this.endTime - this.startTime) / 1000).toFixed(2);
-        $("#score").html(this.score).show();
+        const totalChars = this.typeWords.join("").length;
+        const timeMinutes = (this.endTime - this.startTime) / 60000;
+        const wpm = (totalChars / 5) / timeMinutes;
+        this.wpm = wpm.toFixed(2);
+        $("#score").html(this.wpm + " WPM").show();
+        this.showImageBasedOnSpeed(this.wpm);
+        this.showChatMessage(this.wpm);
         this.saveResult();
     }
 
-    saveResult() {
-        let result = {
-            name: this.name,
-            score: this.score
+    showImageBasedOnSpeed(wpm) {
+        let imageSrc = "";
+        if (wpm <= 20) {
+            imageSrc = "images/beginner.jpg";
+        } else if (wpm <= 40) {
+            imageSrc = "images/average.jpg";
+        } else if (wpm <= 60) {
+            imageSrc = "images/good.jpg";
+        } else {
+            imageSrc = "images/excellent.jpg";
         }
+        $('#speedImage').attr("src", imageSrc).show();
+    }
+
+    showChatMessage(wpm) {
+        let message = "";
+        if (wpm <= 20) {
+            message = `Tere, ${this.name}! Sinu trükkimiskiirus on: ${wpm} WPM. Tasub harjutada!`;
+        } else if (wpm <= 40) {
+            message = `Tubli, ${this.name}! Sinu trükkimiskiirus on: ${wpm} WPM. Võiks veel parem olla!`;
+        } else if (wpm <= 60) {
+            message = `Hea töö, ${this.name}! Sinu trükkimiskiirus on: ${wpm} WPM. Väga hästi!`;
+        } else {
+            message = `Suurepärane, ${this.name}! Sinu trükkimiskiirus on: ${wpm} WPM. Sa oled tõeline meister!`;
+        }
+        $('#chatMessage').html(message).show();
+    }
+
+    saveResult() {
+        const totalChars = this.typeWords.join("").length;
+        const timeMinutes = (this.endTime - this.startTime) / 60000;
+        const wpm = timeMinutes > 0 ? (totalChars / 5) / timeMinutes : 0;
+    
+        const result = {
+            name: this.name,
+            wpm: wpm.toFixed(2),
+            id: Date.now()
+        };
+    
+        this.latestResultId = result.id;
         this.allResults.push(result);
-        this.allResults.sort((a, b) => parseFloat(a.score) - parseFloat(b.score));
+    
+        // Sorteeri ja salvesta
+        this.allResults.sort((a, b) => parseFloat(b.wpm) - parseFloat(a.wpm));
         localStorage.setItem('typer', JSON.stringify(this.allResults));
-        this.saveToFile();
+    
+        // Näita tulemusi ainult pärast sorteerimist
         this.showAllResults();
+        this.saveToFile();
     }
 
     showAllResults() {
         $('#results').html("");
         for (let i = 0; i < this.allResults.length; i++) {
-            $('#results').append("<div>" + this.allResults[i].name + " " + this.allResults[i].score + "</div>");
+            const result = this.allResults[i];
+            const name = result.name.trim() === "" ? "Nimetu" : result.name;
+    
+            let wpm = result.wpm;
+            
+            // Kui vana tulemus (score), teisenda see WPM-iks
+            if (!wpm && result.score) {
+                const totalChars = (this.wordsInGame * (this.startingWordLength + (this.wordsInGame - 1) / 2));
+                const timeMinutes = parseFloat(result.score) / 60;
+                wpm = (totalChars / 5) / timeMinutes;
+                result.wpm = wpm.toFixed(2); // Uuenda andmed
+            }
+    
+            $('#results').append(`
+                <div class="result-card">
+                    <h3>Tulemus ${i + 1}</h3>
+                    <p><strong>Nimi:</strong> ${name}</p>
+                    <p><strong>WPM:</strong> ${parseFloat(result.wpm).toFixed(2)}</p>
+                </div>
+            `);
         }
+        $('#results').show();
     }
-
-    saveToFile() {
-        $.post('server.php', { save: this.allResults }).fail(function () {
-            console.log("Fail");
-        })
-    }
-}
-
-let typer = new Typer(playerName);
+};
+    
 
 $(document).ready(function () {
+    const typer = new Typer(playerName);
+
+    $(document).keypress((event) => {
+        if (typer && typeof typer.shortenWords === 'function') {
+            typer.shortenWords(event.key);
+        }
+    });
+
     $('#resultsBtn').click(function () {
         $('#resultsModal').show();
         $('#resultsBtn').hide();
@@ -164,24 +220,44 @@ $(document).ready(function () {
             $('#resultsModal').hide();
             $('#resultsBtn').show();
         }
-    }
+    };
 });
 
-function showFinalResults(data) {
-    const resultsContainer = $('#results');
-    resultsContainer.empty();
 
-    data.content.forEach((entry, index) => {
-        const name = entry.name.trim() === "" ? "Nimetu" : entry.name;
-        const score = parseFloat(entry.score).toFixed(2);
+function applySettings() {
+    const textColor = localStorage.getItem('textColor') || 'white';
+    const bgColor = localStorage.getItem('bgColor') || '#2f2f2f';
+    const textSize = localStorage.getItem('textSize') || '16px';
 
-        const resultCard = `
-            <div class="result-card">
-                <h3>Tulemus ${index + 1}</h3>
-                <p><strong>Nimi:</strong> ${name}</p>
-                <p><strong>Skoor:</strong> ${score}</p>
-            </div>
-        `;
-        resultsContainer.append(resultCard);
+    document.body.style.color = textColor;
+    document.body.style.backgroundColor = bgColor;
+    document.body.style.fontSize = textSize;
+}
+
+function setupSettingsMenu() {
+    $('#settingsBtn').click(() => {
+        $('#settingsModal').show();
+    });
+
+    $('.close-settings').click(() => {
+        $('#settingsModal').hide();
+    });
+
+    $('#applySettings').click(() => {
+        const textColor = $('#textColor').val();
+        const bgColor = $('#bgColor').val();
+        const textSize = $('#textSize').val();
+
+        localStorage.setItem('textColor', textColor);
+        localStorage.setItem('bgColor', bgColor);
+        localStorage.setItem('textSize', textSize);
+
+        applySettings();
+        $('#settingsModal').hide();
     });
 }
+
+$(document).ready(function () {
+    applySettings();
+    setupSettingsMenu();
+});
